@@ -1,8 +1,11 @@
 from flask import Flask, jsonify, request
+from werkzeug.security import check_password_hash, generate_password_hash
+
 from config import Config
 from extensions import db
 from models import User
 import re
+from all_functions import email_format
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -19,6 +22,7 @@ def create_user():
 
     if not all(field in data for field in required_fields):
         return jsonify({'error': "Missing required fields"}), 400
+
 
     email_pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
     if not re.match(email_pattern, data['email']):
@@ -70,13 +74,13 @@ def update_user(id):
 @app.route('/users/<int:id>/change_password',methods = ['PUT'])
 def change_password(id):
     data = request.get_json()
-    user = User.query.get(id)
+    user = User.query.filter_by(id=id).first()
     if not user:
         return jsonify({'error':'User does not exist'})
 
-    if data['old_password'] == user.password:
+    if check_password_hash(user.password,data['old_password']):
         if data['new_password'] == data['confirm_password']:
-            User.password = data['new_password']
+            user.password = generate_password_hash(data['new_password'])
             db.session.commit()
             return jsonify({'message':'successfully changed password'}),200
         else:
@@ -103,7 +107,7 @@ def all_users():
     if users:
        user_list =[]
        for user in users:
-            user_list.append(user.to_dict(include_password=Truegit ))
+            user_list.append(user.to_dict(include_password=True ))
        return jsonify(user_list),200
     else:
         return jsonify({'error':'no registered user'}),404

@@ -26,4 +26,3 @@ class User(db.Model):
         if include_password:
             user_data["password"] = self.password  # hashed password
         return user_data
-
